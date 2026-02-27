@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <title>Visor TiQAL PRO</title>
+    <!-- Proj4js for UTM to LatLon Conversionn -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0f">
+</head>
+
+<body>
+    <!-- ═══════════ HEADER ═══════════ -->
+    <header id="main-header">
+        <div class="header-left">
+            <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            <div class="brand">
+                <span class="brand-icon">◈</span>
+                <span class="brand-text">Visor<span class="brand-accent">TiQAL</span></span>
+            </div>
+        </div>
+        <div class="header-center">
+            <div class="pk-display">
+                <span class="pk-label">PK</span>
+                <input type="text" id="kmInput" value="ESPERANDO ARCHIVO..."
+                    title="Presiona Enter para buscar progresiva" spellcheck="false">
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="upload-dropdown">
+                <button class="btn-upload" onclick="toggleUploadMenu()" title="Cargar Datos" id="btnUploadHeader">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span>CARGAR DATOS</span>
+                </button>
+                <div class="upload-menu" id="uploadMenu" style="display:none;">
+                    <button onclick="document.getElementById('fileInput').click(); toggleUploadMenu();">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                            <polyline points="13 2 13 9 20 9"></polyline>
+                        </svg>
+                        Archivos (.TiQAL)
+                    </button>
+                    <button onclick="document.getElementById('folderInput').click(); toggleUploadMenu();">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                            </path>
+                        </svg>
+                        Carpeta Exacta
+                    </button>
+                </div>
+            </div>
+            <input type="file" id="fileInput" style="display:none" accept="*/*" multiple>
+            <input type="file" id="folderInput" style="display:none" webkitdirectory directory multiple>
+        </div>
+    </header>
+
+    <!-- Mobile Overlay for Sidebar -->
+    <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ═══════════ APP CONTAINER ═══════════ -->
+    <div id="app-container">
+        <!-- SIDEBAR -->
+        <nav id="sidebar">
+            <button class="nav-btn active" data-layout="layout-seccion" onclick="changeLayout('layout-seccion', this)"
+                title="Sección Transversal">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M2 20 L7 14 L12 16 L17 8 L22 12" />
+                </svg>
+                <span>SECCIÓN</span>
+            </button>
+            <button class="nav-btn" data-layout="layout-planta" onclick="changeLayout('layout-planta', this)"
+                title="Vista en Planta">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <path d="M3 12 Q8 8, 12 12 T21 12" />
+                </svg>
+                <span>PLANTA</span>
+            </button>
+            <button class="nav-btn" data-layout="layout-perfil" onclick="changeLayout('layout-perfil', this)"
+                title="Perfil Longitudinal">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 18 8 14 12 16 16 10 20 6" />
+                    <line x1="4" y1="20" x2="20" y2="20" />
+                </svg>
+                <span>PERFIL</span>
+            </button>
+
+            <div class="nav-separator"></div>
+
+            <button class="nav-btn" data-layout="layout-multi" onclick="changeLayout('layout-multi', this)"
+                title="Multi-Vista">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="8" height="8" rx="1" />
+                    <rect x="13" y="3" width="8" height="8" rx="1" />
+                    <rect x="3" y="13" width="8" height="8" rx="1" />
+                    <rect x="13" y="13" width="8" height="8" rx="1" />
+                </svg>
+                <span>MULTI</span>
+            </button>
+
+            <div class="nav-separator"></div>
+
+            <button class="nav-btn" onclick="capturaInteligente()" title="Captura de Pantalla">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M5 7h1a2 2 0 0 0 2-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2" />
+                    <circle cx="12" cy="13" r="3" />
+                </svg>
+                <span>FOTO</span>
+            </button>
+
+            <div class="nav-separator"></div>
+
+            <!-- Measurement Tools -->
+            <button class="nav-btn" id="btnMeasurePoint" onclick="setMeasureTool('point')"
+                title="Medir Punto (Coordenadas)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <line x1="12" y1="2" x2="12" y2="6" />
+                    <line x1="12" y1="18" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="6" y2="12" />
+                    <line x1="18" y1="12" x2="22" y2="12" />
+                </svg>
+                <span>PUNTO</span>
+            </button>
+            <button class="nav-btn" id="btnMeasureDist" onclick="setMeasureTool('distance')" title="Medir Distancia">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path
+                        d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.41 2.41 0 0 1 0-3.4l2.6-2.6a2.41 2.41 0 0 1 3.4 0Z" />
+                    <path d="m14.5 12.5 2-2" />
+                    <path d="m11.5 9.5 2-2" />
+                    <path d="m8.5 6.5 2-2" />
+                    <path d="m17.5 15.5 2-2" />
+                </svg>
+                <span>DIST</span>
+            </button>
+            <button class="nav-btn" id="btnMeasureSlope" onclick="setMeasureTool('slope')" title="Medir Pendiente (%)"
+                data-req-seccion="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 20 L20 4" />
+                    <path d="M2 20 L20 20" />
+                    <path d="M20 4 L20 20" />
+                    <text x="10" y="23" font-size="7" fill="currentColor" stroke="none" font-weight="bold">%</text>
+                </svg>
+                <span>PEND</span>
+            </button>
+
+            <div class="nav-separator"></div>
+
+            <button class="nav-btn nav-btn-note" id="btnMeasurePin" onclick="setMeasureTool('pin')" title="Pin de Nota"
+                data-req-seccion="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span>NOTA</span>
+            </button>
+            <button class="nav-btn nav-btn-note" onclick="toggleNotesPanel()" id="btnToolNotesList"
+                title="Lista de Hallazgos" data-req-seccion="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <span>NOTAS</span>
+            </button>
+            <button class="nav-btn nav-btn-layers" onclick="toggleProyectosPanel()" id="btnToolProyectos"
+                title="Gestor de Proyectos">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                <span>DATA</span>
+            </button>
+
+            <div class="nav-separator"></div>
+
+            <!-- OSnap Toggle -->
+            <button class="nav-btn active" id="btnSnap" onclick="toggleSnap()" title="Object Snap (Vertices)">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="7" y="7" width="10" height="10" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                    <line x1="12" y1="2" x2="12" y2="7" />
+                    <line x1="12" y1="17" x2="12" y2="22" />
+                    <line x1="2" y1="12" x2="7" y2="12" />
+                    <line x1="17" y1="12" x2="22" y2="12" />
+                </svg>
+                <span>SNAP</span>
+            </button>
+            <button class="nav-btn btn-home" onclick="volverAlInicio()" title="Volver al Inicio">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+                <span>INICIO</span>
+            </button>
+
+            <div class="nav-spacer"></div>
+
+            <button class="nav-btn btn-settings-trigger" onclick="toggleSettings()" title="Ajustes">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3" />
+                    <path
+                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                <span>AJUSTES</span>
+            </button>
+        </nav>
+
+        <!-- ═══════════ NOTES LIST PANEL (DRAWER) ═══════════ -->
+        <div id="notesPanel" class="drawer-panel">
+            <div class="drawer-header">
+                <h3>Lista de Hallazgos</h3>
+                <button class="btn-drawer-close" onclick="toggleNotesPanel()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="drawer-content">
+                <p id="notesEmptyState" class="notes-empty">No hay notas en el proyecto.</p>
+                <div class="notes-timeline" id="notesListContainer">
+                    <!-- Notas dinámicas -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ PROYECTOS LIST PANEL (DRAWER) ═══════════ -->
+        <div id="proyectosPanel" class="drawer-panel">
+            <div class="drawer-header">
+                <h3>Gestor de Proyectos</h3>
+                <button class="btn-drawer-close" onclick="toggleProyectosPanel()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="drawer-content" style="padding: 16px 12px;">
+                <p id="proyectosEmptyState" class="notes-empty">No hay proyectos cargados.</p>
+                <div class="proyectos-list" id="proyectosListContainer">
+                    <!-- Proyectos dinámicos -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN DASHBOARD -->
+        <main id="main-dashboard" class="layout-seccion">
+            <!-- Panel Planta -->
+            <section class="panel" id="panel-planta">
+                <div class="panel-header">
+                    <span class="panel-title">VISTA DE PLANTA</span>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="canvasPlanta"></canvas>
+                    <canvas id="canvasPlantaGPS" class="overlay-canvas"></canvas>
+                    <div class="panel-controls">
+                        <button class="ctrl-btn" id="btnToggleGPS" onclick="toggleGPS()"
+                            title="Ubicación GPS (Seguimiento)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                            </svg>
+                        </button>
+                        <button class="ctrl-btn" id="btnToggleMapQuick" onclick="toggleMapQuick()"
+                            title="Alternar Mapa Base">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"></polygon>
+                                <line x1="9" y1="3" x2="9" y2="18"></line>
+                                <line x1="15" y1="6" x2="15" y2="21"></line>
+                            </svg>
+                        </button>
+                        <button class="ctrl-btn" onclick="resetView('planta')" title="Centrar Vista">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
+                                <circle cx="12" cy="12" r="1" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel Perfil -->
+            <section class="panel" id="panel-perfil">
+                <div class="panel-header">
+                    <span class="panel-title">VISTA DE PERFIL LONGITUDINAL</span>
+                </div>
+                <div class="canvas-wrapper">
+                    <canvas id="canvasPerfil"></canvas>
+                    <div class="panel-controls">
+                        <button class="ctrl-btn" onclick="resetView('perfil')" title="Centrar Vista">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
+                                <circle cx="12" cy="12" r="1" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Panel Sección -->
+            <section class="panel" id="panel-seccion">
+                <div class="panel-header">
+                    <span class="panel-title">VISTA DE SECCIÓN TRANSVERSAL</span>
+                </div>
+                <div class="canvas-wrapper" id="canvasContainer">
+                    <canvas id="visorCanvas"></canvas>
+                    <div id="hud" style="display: none;">
+                        <div class="hud-row" id="hudBaseZ">
+                            <span class="hud-label">Z</span>
+                            <span class="hud-value" id="hudY">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row" id="hudBaseX">
+                            <span class="hud-label">X</span>
+                            <span class="hud-value" id="hudX">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-separator" id="hudMeasSep" style="display:none;"></div>
+                        <div class="hud-row" id="hudMeasP1X" style="display:none;">
+                            <span class="hud-label">X1</span>
+                            <span class="hud-value" id="hudP1X">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row" id="hudMeasP1Z" style="display:none;">
+                            <span class="hud-label">Z1</span>
+                            <span class="hud-value" id="hudP1Z">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-separator" id="hudMeasP1P2Sep" style="display:none;"></div>
+                        <div class="hud-row" id="hudMeasP2X" style="display:none;">
+                            <span class="hud-label">X2</span>
+                            <span class="hud-value" id="hudP2X">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row" id="hudMeasP2Z" style="display:none;">
+                            <span class="hud-label">Z2</span>
+                            <span class="hud-value" id="hudP2Z">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-separator" id="hudMeasP2DeltaSep" style="display:none;"></div>
+                        <div class="hud-row" id="hudMeasDx" style="display:none;">
+                            <span class="hud-label">ΔX</span>
+                            <span class="hud-value" id="hudDx">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row" id="hudMeasDy" style="display:none;">
+                            <span class="hud-label">ΔZ</span>
+                            <span class="hud-value" id="hudDy">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row hud-highlight" id="hudMeasDist" style="display:none;">
+                            <span class="hud-label">D</span>
+                            <span class="hud-value" id="hudDist">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                        <div class="hud-row hud-highlight" id="hudMeasSlope" style="display:none;">
+                            <span class="hud-label">%</span>
+                            <span class="hud-value" id="hudSlope">0.00</span>
+                            <span class="hud-unit">%</span>
+                        </div>
+                        <div class="hud-row hud-highlight" id="hudMeasTalud" style="display:none;">
+                            <span class="hud-label">X:1</span>
+                            <span class="hud-value" id="hudTalud">0.00:1</span>
+                        </div>
+                        <div class="hud-row" id="hudMeasD" style="display:none;">
+                            <span class="hud-label">D</span>
+                            <span class="hud-value" id="hudD">0.00</span>
+                            <span class="hud-unit">m</span>
+                        </div>
+                    </div>
+
+                    <!-- PIN HUD VIEWER -->
+                    <div id="pinHud" class="pin-hud" style="display: none;">
+                        <div class="pin-hud-header">
+                            <span id="pinHudTitle" class="pin-hud-title"><span class="note-icon">📍</span> Nota</span>
+                            <button class="btn-close btn-close-sm" onclick="closePinHud()"
+                                aria-label="Cerrar">×</button>
+                        </div>
+                        <div id="pinHudText" class="pin-hud-body"></div>
+                        <div class="pin-hud-footer">
+                            <button class="btn-primary" style="padding: 4px 12px; font-size: 11px;"
+                                onclick="iniciarEdicionNota()">Editar Pin</button>
+                        </div>
+                    </div>
+
+                    <!-- PIN HUD EDITOR -->
+                    <div id="pinEditHud" class="pin-hud" style="display: none;">
+                        <div class="pin-hud-header">
+                            <span class="pin-hud-title"><span class="note-icon">📍</span> Redactar Nota</span>
+                            <button class="btn-close btn-close-sm" onclick="closePinModal()"
+                                aria-label="Cerrar">×</button>
+                        </div>
+                        <div class="pin-hud-body" style="padding: 12px; padding-bottom: 4px;">
+                            <textarea id="txtPinNote" class="note-textarea" rows="3"
+                                placeholder="Describe el hallazgo constructivo..."></textarea>
+                            <p class="note-hint" style="margin-top: 8px;">Pin anclado a este PK.</p>
+                        </div>
+                        <div class="pin-hud-footer">
+                            <button class="btn-secondary" style="padding: 6px 16px; font-size: 11px;"
+                                onclick="closePinModal()">Cancelar</button>
+                            <button class="btn-primary" style="padding: 6px 16px; font-size: 11px;"
+                                onclick="savePinNote()">Guardar</button>
+                        </div>
+                    </div>
+                    <div class="hud-mode" id="hudMode" style="display:none;">
+                        <span id="hudModeText">PUNTO</span>
+                    </div>
+                </div>
+                <div class="panel-controls">
+                    <button class="ctrl-btn" onclick="resetView('seccion')" title="Centrar Vista">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0" />
+                            <circle cx="12" cy="12" r="1" />
+                        </svg>
+                    </button>
+                </div>
+    </div>
+    </section>
+    </main>
+    </div>
+
+    <!-- ═══════════ FOOTER / SLIDER ═══════════ -->
+    <footer id="main-footer">
+        <div class="slider-container">
+            <div class="slider-info">
+                <span id="sliderInfoLeft" class="slider-label">—</span>
+                <span id="sliderInfoCenter" class="slider-label slider-label-center">Secciones: 0</span>
+                <span id="sliderInfoRight" class="slider-label">—</span>
+            </div>
+            <div class="slider-track-wrapper">
+                <input type="range" id="stationSlider" min="0" max="0" value="0">
+            </div>
+        </div>
+    </footer>
+
+    <!-- ═══════════ SETTINGS MODAL ═══════════ -->
+    <div id="settingsModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <header class="modal-header">
+                <div class="modal-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    <span>Configuración</span>
+                </div>
+                <button class="btn-modal-close" onclick="toggleSettings()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </header>
+
+            <div class="modal-body">
+                <aside class="settings-nav">
+                    <button class="settings-nav-btn active" onclick="openTab('tab-general', this)">General</button>
+                    <button class="settings-nav-btn" onclick="openTab('tab-planta', this)">Planta</button>
+                    <button class="settings-nav-btn" onclick="openTab('tab-perfil', this)">Perfil</button>
+                    <button class="settings-nav-btn" onclick="openTab('tab-seccion', this)">Sección</button>
+                </aside>
+
+                <div class="settings-content">
+                    <!-- TAB GENERAL -->
+                    <div id="tab-general" class="tab-panel active">
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Apariencia</h3>
+                            <div class="setting-row">
+                                <span>Modo Día / Noche</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="chkTheme" onchange="toggleTheme(this)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Textos</h3>
+                            <div class="setting-row">
+                                <span>Escala de Texto</span>
+                                <input type="number" id="cfgTextScale" value="1.0" step="0.1" min="0.5" max="5.0"
+                                    class="input-num">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB PLANTA -->
+                    <div id="tab-planta" class="tab-panel">
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Kilometraje</h3>
+                            <div class="setting-row"><span>Mostrar Etiquetas PK</span><input type="checkbox"
+                                    id="chkPlantaLabels" checked></div>
+                            <div class="setting-row"><span>Mostrar Estacado</span><input type="checkbox"
+                                    id="chkPlantaTicks" checked></div>
+                            <div class="setting-row"><span>Intervalo Texto (Mayores)</span><input type="number"
+                                    id="cfgPlantaMajor" value="1000" step="100" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo Ticks (Menores)</span><input type="number"
+                                    id="cfgPlantaMinor" value="100" step="50" class="input-num"></div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Grilla y Coordenadas</h3>
+                            <div class="setting-row"><span>Intervalo General (m)</span><input type="number"
+                                    id="cfgGridPlanta" value="200" step="50" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo Miniatura (m)</span><input type="number"
+                                    id="cfgGridPlantaMulti" value="500" step="100" class="input-num"></div>
+                            <div class="setting-row"><span>Mostrar Grilla</span><input type="checkbox"
+                                    id="chkShowGridPlanta" checked></div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Mapa Base de Google</h3>
+                            <div class="setting-row">
+                                <span>Mostrar Mapa Base</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="chkShowMap" onchange="toggleMap(this)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                            <div class="setting-row">
+                                <span>Tipo de Mapa</span>
+                                <select id="cfgMapType" class="input-select" onchange="changeMapTypeAndSync()">
+                                    <option value="s" selected>Satélite</option>
+                                    <option value="y">Híbrido (Satélite + Etiquetas)</option>
+                                    <option value="m">Calles (Roadmap)</option>
+                                    <option value="p">Terreno (Físico)</option>
+                                </select>
+                            </div>
+                            <div class="setting-row" style="flex-direction: column; align-items: flex-start;">
+                                <div
+                                    style="display: flex; justify-content: space-between; width: 100%; margin-bottom: 6px;">
+                                    <span>Opacidad del Mapa</span>
+                                    <span id="mapOpacityVal" style="font-size: 11px; opacity: 0.8;">80%</span>
+                                </div>
+                                <input type="range" id="cfgMapOpacity" min="10" max="100" value="80" style="width: 100%"
+                                    oninput="document.getElementById('mapOpacityVal').innerText = this.value + '%'; changeMapOpacityAndSync()">
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Capas</h3>
+                            <div id="layers-planta-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB PERFIL -->
+                    <div id="tab-perfil" class="tab-panel">
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Visualización</h3>
+                            <div class="setting-row">
+                                <span>Exageración Vertical</span>
+                                <select id="cfgExajPerfil" class="input-select">
+                                    <option value="1">1x (Real)</option>
+                                    <option value="5">5x</option>
+                                    <option value="10" selected>10x (Estándar)</option>
+                                    <option value="20">20x</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <span>Seguir a (Punto Rojo)</span>
+                                <select id="cfgTargetPerfil" class="input-select">
+                                    <option value="auto">Automático</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Grillas</h3>
+                            <div class="setting-row"><span>Intervalo PK (Gral)</span><input type="number"
+                                    id="cfgGridPerfilK" value="500" step="50" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo PK (Mini)</span><input type="number"
+                                    id="cfgGridPerfilKMulti" value="1000" step="100" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo Cota (Gral)</span><input type="number"
+                                    id="cfgGridPerfilZ" value="10" step="1" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo Cota (Mini)</span><input type="number"
+                                    id="cfgGridPerfilZMulti" value="50" step="5" class="input-num"></div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Capas</h3>
+                            <div id="layers-perfil-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- TAB SECCION -->
+                    <div id="tab-seccion" class="tab-panel">
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Grilla Transversal</h3>
+                            <div class="setting-row"><span>Intervalo Desfase (X)</span><input type="number"
+                                    id="cfgGridSeccionX" value="5" step="1" class="input-num"></div>
+                            <div class="setting-row"><span>Intervalo Elevación (Y)</span><input type="number"
+                                    id="cfgGridSeccionY" value="5" step="1" class="input-num"></div>
+                        </div>
+                        <div class="setting-group">
+                            <h3 class="setting-group-title">Capas</h3>
+                            <div id="layers-seccion-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="modal-footer">
+                <button class="btn-secondary" onclick="toggleSettings()">Cancelar</button>
+                <button class="btn-primary" onclick="applySettingsAndClose()">Guardar</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ═══════════ WELCOME OVERLAY ═══════════ -->
+    <div id="welcomeOverlay" class="welcome-overlay">
+        <!-- Topographic SVG Pattern Background -->
+        <svg class="welcome-topo-bg" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice"
+            xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <radialGradient id="glow" cx="50%" cy="45%" r="50%">
+                    <stop offset="0%" stop-color="rgba(0,229,255,0.08)" />
+                    <stop offset="50%" stop-color="rgba(0,100,200,0.03)" />
+                    <stop offset="100%" stop-color="rgba(0,0,0,0)" />
+                </radialGradient>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#glow)" />
+            <!-- Topographic contour lines -->
+            <g fill="none" stroke="rgba(0,229,255,0.06)" stroke-width="1">
+                <ellipse cx="500" cy="300" rx="450" ry="250" />
+                <ellipse cx="500" cy="290" rx="380" ry="210" />
+                <ellipse cx="500" cy="280" rx="310" ry="170" />
+                <ellipse cx="500" cy="270" rx="240" ry="130" />
+                <ellipse cx="500" cy="260" rx="170" ry="90" />
+                <ellipse cx="500" cy="250" rx="100" ry="55" />
+                <ellipse cx="500" cy="245" rx="50" ry="28" />
+            </g>
+            <!-- Grid dots -->
+            <g fill="rgba(0,229,255,0.04)">
+                <circle cx="100" cy="100" r="1.5" />
+                <circle cx="200" cy="100" r="1.5" />
+                <circle cx="300" cy="100" r="1.5" />
+                <circle cx="400" cy="100" r="1.5" />
+                <circle cx="500" cy="100" r="1.5" />
+                <circle cx="600" cy="100" r="1.5" />
+                <circle cx="700" cy="100" r="1.5" />
+                <circle cx="800" cy="100" r="1.5" />
+                <circle cx="900" cy="100" r="1.5" />
+                <circle cx="100" cy="200" r="1.5" />
+                <circle cx="200" cy="200" r="1.5" />
+                <circle cx="300" cy="200" r="1.5" />
+                <circle cx="400" cy="200" r="1.5" />
+                <circle cx="500" cy="200" r="1.5" />
+                <circle cx="600" cy="200" r="1.5" />
+                <circle cx="700" cy="200" r="1.5" />
+                <circle cx="800" cy="200" r="1.5" />
+                <circle cx="900" cy="200" r="1.5" />
+                <circle cx="100" cy="300" r="1.5" />
+                <circle cx="200" cy="300" r="1.5" />
+                <circle cx="300" cy="300" r="1.5" />
+                <circle cx="400" cy="300" r="1.5" />
+                <circle cx="600" cy="300" r="1.5" />
+                <circle cx="700" cy="300" r="1.5" />
+                <circle cx="800" cy="300" r="1.5" />
+                <circle cx="900" cy="300" r="1.5" />
+                <circle cx="100" cy="400" r="1.5" />
+                <circle cx="200" cy="400" r="1.5" />
+                <circle cx="300" cy="400" r="1.5" />
+                <circle cx="400" cy="400" r="1.5" />
+                <circle cx="500" cy="400" r="1.5" />
+                <circle cx="600" cy="400" r="1.5" />
+                <circle cx="700" cy="400" r="1.5" />
+                <circle cx="800" cy="400" r="1.5" />
+                <circle cx="900" cy="400" r="1.5" />
+                <circle cx="100" cy="500" r="1.5" />
+                <circle cx="200" cy="500" r="1.5" />
+                <circle cx="300" cy="500" r="1.5" />
+                <circle cx="400" cy="500" r="1.5" />
+                <circle cx="500" cy="500" r="1.5" />
+                <circle cx="600" cy="500" r="1.5" />
+                <circle cx="700" cy="500" r="1.5" />
+                <circle cx="800" cy="500" r="1.5" />
+                <circle cx="900" cy="500" r="1.5" />
+            </g>
+        </svg>
+
+        <div class="welcome-content">
+            <!-- Badge -->
+            <div class="welcome-badge">Ingeniería Civil 4.0</div>
+
+            <!-- Logo & Title -->
+            <div class="welcome-logo">
+                <div class="welcome-icon-wrapper">
+                    <span class="welcome-icon">◈</span>
+                    <div class="welcome-icon-ring"></div>
+                </div>
+                <h1 class="welcome-title">
+                    <span class="welcome-title-visor">Visor</span><span class="brand-accent">TiQAL</span>
+                </h1>
+            </div>
+
+            <!-- Description -->
+            <p class="welcome-description">
+                Visualizador profesional de <strong>secciones transversales</strong>,
+                <strong>planta</strong> y <strong>perfil longitudinal</strong> para proyectos de infraestructura vial.
+            </p>
+
+            <!-- Upload Area -->
+            <div class="welcome-upload-zone" id="dropZone">
+                <div class="hero-upload-buttons">
+                    <button class="btn-upload-hero" onclick="document.getElementById('fileInput').click()">
+                        <div class="btn-upload-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <div class="btn-upload-text">
+                            <span class="btn-upload-main">Archivos</span>
+                            <span class="btn-upload-sub">.TiQAL</span>
+                        </div>
+                    </button>
+                    <button class="btn-upload-hero folder-btn" onclick="document.getElementById('folderInput').click()">
+                        <div class="btn-upload-icon">
+                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <div class="btn-upload-text">
+                            <span class="btn-upload-main">Carpeta</span>
+                            <span class="btn-upload-sub">De Proyecto</span>
+                        </div>
+                    </button>
+                </div>
+                <div class="btn-upload-hint"
+                    style="text-align:center; display:block; margin-top: 16px; font-size: 13px; color: var(--text-muted);">
+                    Arrastra una carpeta entera o múltiples archivos aquí para analizarlos
+                </div>
+            </div>
+
+            <!-- Feature Cards -->
+            <div class="welcome-features">
+                <div class="feature-card">
+                    <div class="feature-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M2 20 L7 14 L12 16 L17 8 L22 12" />
+                        </svg>
+                    </div>
+                    <span class="feature-card-title">Secciones</span>
+                    <span class="feature-card-desc">Vista transversal</span>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <path d="M3 12 Q8 8, 12 12 T21 12" />
+                        </svg>
+                    </div>
+                    <span class="feature-card-title">Planta</span>
+                    <span class="feature-card-desc">Alineamiento</span>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <polyline points="4 18 8 14 12 16 16 10 20 6" />
+                            <line x1="4" y1="20" x2="20" y2="20" />
+                        </svg>
+                    </div>
+                    <span class="feature-card-title">Perfil</span>
+                    <span class="feature-card-desc">Longitudinal</span>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-card-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="3" y="3" width="8" height="8" rx="1" />
+                            <rect x="13" y="3" width="8" height="8" rx="1" />
+                            <rect x="3" y="13" width="8" height="8" rx="1" />
+                            <rect x="13" y="13" width="8" height="8" rx="1" />
+                        </svg>
+                    </div>
+                    <span class="feature-card-title">Multi-Vista</span>
+                    <span class="feature-card-desc">Dashboard</span>
+                </div>
+            </div>
+
+            <!-- Keyboard Hints -->
+            <div class="welcome-hints">
+                <span class="kbd-hint"><kbd>←</kbd><kbd>→</kbd> Navegar</span>
+                <span class="kbd-hint"><kbd>1</kbd>-<kbd>4</kbd> Vistas</span>
+                <span class="kbd-hint"><kbd>Scroll</kbd> Zoom</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="welcome-footer">
+            <span>TiQAL — Infraestructura Lineal</span>
+            <span>⚡ Powered by Canvas 2D</span>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/state.js"></script>
+    <script src="js/seccion.js"></script>
+    <script src="js/planta.js"></script>
+    <script src="js/perfil.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Register Service Worker for PWA (Mobile Installation)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado con éxito:', reg.scope))
+                    .catch(err => console.error('Error al registrar Service Worker:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>

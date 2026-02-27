@@ -1,0 +1,10 @@
+{
+    "name": "Visor TiQAL",
+    "short_name": "VisorTiQAL",
+    "description": "Visor profesional de secciones transversales, planta y perfil longitudinal",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#07070d",
+    "theme_color": "#00e5ff",
+    "icons": []
+}
