@@ -307,9 +307,9 @@ body.light-mode .upload-menu {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 0;
+    padding: 4px 0;
     flex-shrink: 0;
-    gap: 2px;
+    gap: 0px;
     overflow-y: auto;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
@@ -321,7 +321,7 @@ body.light-mode .upload-menu {
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    padding: 10px 4px;
+    padding: 8px 4px;
     background: transparent;
     border: none;
     border-radius: var(--radius-sm);
@@ -387,7 +387,14 @@ body.light-mode .upload-menu {
     width: 36px;
     height: 1px;
     background: var(--border);
-    margin: 6px 0;
+    margin: 4px 0;
+}
+
+.nav-separator.main-sep {
+    width: 44px;
+    height: 1.5px;
+    background: var(--accent-glow);
+    border-radius: 2px;
 }
 
 .nav-spacer {

@@ -172,7 +172,36 @@ function cambiarProyectoActivo(id) {
     appConfig.layers = { planta: {}, perfil: {}, seccion: {} };
 
     // ── CONFIGURAR CAPAS Y LÍMITES PARA ESTE PROYECTO ──
-    appConfig.layers.planta['Eje'] = { color: '#ff3d00', width: 2, visible: true, type: 'line' };
+    const paletteSecundarios = ['#ffd600', '#e040fb', '#00e5ff', '#ff6d00', '#76ff03', '#448aff'];
+    let colorIndex = 0;
+
+    appState.proyectos.forEach((proyecto, pIdx) => {
+        const esActivo = proyecto.id === id;
+
+        let colorEje;
+        let widthEje;
+
+        if (esActivo) {
+            // Reutiliza color si ya existía (ej. editado por usuario) o usa default (Rojo pedido por usuario)
+            const cExistente = appConfig.layers?.planta?.[proyecto.nombre]?.color;
+            // Para el activo, si no hay color guardado, damos el rojo
+            colorEje = cExistente || '#ff0000';
+            widthEje = 5.0; // Espesor 5 para principal
+        } else {
+            // Mantenemos el color configurado si existe, si no, uno de la paleta
+            const cExistente = appConfig.layers?.planta?.[proyecto.nombre]?.color;
+            if (cExistente) {
+                colorEje = cExistente;
+            } else {
+                colorEje = paletteSecundarios[colorIndex % paletteSecundarios.length];
+                colorIndex++;
+            }
+            widthEje = 2.0; // Espesor 2 para secundarios
+        }
+
+        // Se usa el nombre del proyecto como capa
+        appConfig.layers.planta[proyecto.nombre] = { color: colorEje, width: widthEje, visible: proyecto.visible, type: 'line', id: proyecto.id };
+    });
 
     if (appState.perfil) {
         let minK = Infinity, maxK = -Infinity, minZ = Infinity, maxZ = -Infinity;
@@ -244,11 +273,13 @@ function cambiarProyectoActivo(id) {
     syncAllViews();
 }
 
-function recalcularLimitesPlanta() {
+function recalcularLimitesPlanta(soloActivo = false) {
     let minE = Infinity, maxE = -Infinity, minN = Infinity, maxN = -Infinity;
 
     appState.proyectos.forEach(proy => {
         if (!proy.visible) return;
+        if (soloActivo && proy.id !== appState.proyectoActivoId) return; // Solo calcular para el activo si se solicita
+
         const plantaArr = proy.data.planta_trazo || proy.data.planta;
         if (!plantaArr) return;
         plantaArr.forEach(pt => {
@@ -258,6 +289,11 @@ function recalcularLimitesPlanta() {
             if (y < minN) minN = y; if (y > maxN) maxN = y;
         });
     });
+
+    // Si pidieron solo el activo pero no hay limites (ej: no tiene planta), recalculamos global
+    if (soloActivo && minE === Infinity) {
+        return recalcularLimitesPlanta(false);
+    }
 
     if (minE !== Infinity) {
         appState.limitesGlobales.planta = { minE: minE - 500, maxE: maxE + 500, minN: minN - 500, maxN: maxN + 500 };
@@ -626,9 +662,18 @@ function resizeAll() {
 
 function resetView(tipo) {
     if (appState.cameras[tipo]) {
+        if (tipo === 'planta') {
+            recalcularLimitesPlanta(true); // Centrar vista planta recalculando limites SIEMPRE sobre el activo
+        }
         appState.cameras[tipo] = { x: 0, y: 0, zoom: 1 };
         syncAllViews();
     }
+}
+
+function resetViewAll() {
+    recalcularLimitesPlanta(false); // Calcular limites de TODOS los proyectos visibles
+    appState.cameras.planta = { x: 0, y: 0, zoom: 1 };
+    syncAllViews();
 }
 
 const observerPlanta = new ResizeObserver(entries => {
@@ -651,11 +696,30 @@ function openTab(tabId, btn) {
 
 function buildDynamicSettings() {
     // Planta layers
-    const divPlanta = document.getElementById('layers-planta-container');
-    divPlanta.innerHTML = '';
+    const divPlantaPrincipal = document.getElementById('layers-planta-container-principal');
+    const divPlantaSecundarios = document.getElementById('layers-planta-container-secundarios');
+    divPlantaPrincipal.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; padding-left: 5px;">Principal</div>';
+    divPlantaSecundarios.innerHTML = '<div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 4px; padding-left: 5px;">Secundarios</div>';
+
+    let hasSecundarios = false;
+
     Object.keys(appConfig.layers.planta).forEach(key => {
-        divPlanta.appendChild(createLayerControl('planta', key));
+        const layer = appConfig.layers.planta[key];
+        const esPrincipal = layer.id === appState.proyectoActivoId;
+
+        if (esPrincipal) {
+            divPlantaPrincipal.appendChild(createLayerControl('planta', key));
+        } else {
+            hasSecundarios = true;
+            divPlantaSecundarios.appendChild(createLayerControl('planta', key));
+        }
     });
+
+    if (!hasSecundarios) {
+        divPlantaSecundarios.style.display = 'none';
+    } else {
+        divPlantaSecundarios.style.display = 'block';
+    }
 
     // Perfil layers
     const divPerfil = document.getElementById('layers-perfil-container');
@@ -707,7 +771,7 @@ function createLayerControl(viewType, layerName) {
     width.value = layer.width;
     width.step = 0.5;
     width.min = 0.1;
-    width.style.width = '50px';
+    width.style.width = '60px'; // Aumentado para ver el número completo
     width.className = 'input-num';
     width.onchange = (e) => { layer.width = parseFloat(e.target.value); syncAllViews(); };
 

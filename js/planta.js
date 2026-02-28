@@ -184,15 +184,20 @@ function dibujarPlanta() {
     }
 
     // ════════════ ALIGNMENTS (Ejes) ════════════
-    appState.proyectos.forEach(proy => {
-        if (!proy.visible) return;
+    appState.proyectos.forEach((proy, pIdx) => {
+        // La visibilidad y estilo ahora depende de la configuración de "Capas" general de la app
+        const layerConfig = appConfig.layers?.planta?.[proy.nombre];
+        // Si el usuario lo apagó desde Capas o desde el Data panel, se oculta
+        if (!proy.visible || (layerConfig && layerConfig.visible === false)) return;
+
         const isActive = proy.id === appState.proyectoActivoId;
         const raw = proy.data;
         const trazo = raw.planta_trazo || raw.geometria || raw.planta || [];
         if (!trazo || trazo.length === 0) return;
 
-        const colorEje = isActive ? (appConfig.layers?.planta?.['Eje']?.color || (isLight ? '#0066ff' : '#00e5ff')) : (isLight ? '#a0aabf' : '#333344');
-        const widthEje = isActive ? (appConfig.layers?.planta?.['Eje']?.width || 2.5) : 1.5;
+        // Toma el estilo guardado en la config o defaults de fallback
+        const colorEje = layerConfig?.color || (isActive ? '#00e5ff' : '#a0aabf');
+        const widthEje = layerConfig?.width || (isActive ? 5 : 2);
 
         ctx.beginPath();
         ctx.strokeStyle = colorEje;
@@ -216,9 +221,10 @@ function dibujarPlanta() {
         // Ticks - Only draw if active
         if (isActive && esArray3) {
             ctx.fillStyle = isLight ? '#000' : '#fff';
-            ctx.font = `${(10 * escalaTxt) / cam.zoom}px "Inter", sans-serif`;
-            const sizeMajor = 8 / cam.zoom;
-            const sizeMinor = 4 / cam.zoom;
+            // Aumentar el tamaño de la fuente para que se lea mejor (de 13 a 16 y bold)
+            ctx.font = `bold ${(16 * escalaTxt) / cam.zoom}px "Inter", sans-serif`;
+            const sizeMajor = 12 / cam.zoom; // Era 8, lo subimos
+            const sizeMinor = 7 / cam.zoom;  // Era 4, lo subimos para que el menor se vea más grande
             const verTicks = appConfig.planta.showTicks !== false;
 
             for (let i = 0; i < trazo.length - 1; i++) {
@@ -276,13 +282,13 @@ function dibujarPlanta() {
             ctx.lineWidth = 2.0 / cam.zoom;
             ctx.stroke();
 
-            // Label
+            // Label del marcador de ubicación
             ctx.fillStyle = colors.txtPK;
-            ctx.font = `bold ${(15 * escalaTxt) / cam.zoom}px "Inter", sans-serif`;
+            ctx.font = `bold ${(18 * escalaTxt) / cam.zoom}px "Inter", sans-serif`;
             ctx.textAlign = 'left';
             const kE = Math.floor(mActual / 1000);
             const kM = Math.abs(mActual % 1000).toFixed(0).padStart(3, '0');
-            ctx.fillText(`PK ${kE}+${kM}`, toX(pRef.x) + 10 / cam.zoom, toY(pRef.y) - 2 / cam.zoom);
+            ctx.fillText(`PK ${kE}+${kM}`, toX(pRef.x) + 12 / cam.zoom, toY(pRef.y) - 4 / cam.zoom);
         }
     }
 
@@ -319,6 +325,59 @@ function dibujarPlanta() {
             }
         }
     }
+
+    // ════════════ PHASE 3: LEGEND HUD ════════════
+    if (appState.proyectos && appState.proyectos.length > 1) {
+        const legendPadding = 10;
+        const lineHeight = 18 * escalaTxt;
+        const sampleLineLen = 25;
+        const legendGap = 8;
+        const legendX = 16;
+
+        // Filtrar solo los visibles
+        const visibles = appState.proyectos.filter(p => p.visible);
+        if (visibles.length > 0) {
+            const legendH = visibles.length * lineHeight + legendPadding * 2;
+            const legendW = 180 * escalaTxt;
+            const legendY = H - legendH - 16;
+
+            // Fondo semi-transparente
+            ctx.fillStyle = isLight ? 'rgba(255,255,255,0.85)' : 'rgba(10,12,20,0.8)';
+            ctx.strokeStyle = isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(legendX, legendY, legendW, legendH, 6);
+            ctx.fill();
+            ctx.stroke();
+
+            visibles.forEach((proy, i) => {
+                const isActive = proy.id === appState.proyectoActivoId;
+                const layerConfig = appConfig.layers?.planta?.[proy.nombre];
+                const color = layerConfig?.color || (isActive ? '#ff0000' : '#a0aabf');
+                const width = layerConfig?.width || (isActive ? 5 : 2);
+
+                const itemY = legendY + legendPadding + i * lineHeight + lineHeight / 2;
+
+                // Línea de muestra de color
+                ctx.beginPath();
+                ctx.strokeStyle = color;
+                ctx.lineWidth = Math.min(width, 4); // Limitar grosor en la leyenda
+                ctx.lineCap = 'round';
+                ctx.moveTo(legendX + legendPadding, itemY);
+                ctx.lineTo(legendX + legendPadding + sampleLineLen, itemY);
+                ctx.stroke();
+
+                // Nombre del proyecto
+                ctx.fillStyle = isLight ? '#333' : '#ddd';
+                ctx.font = `${isActive ? 'bold ' : ''}${11 * escalaTxt}px "Inter", sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                const maxTextW = legendW - sampleLineLen - legendPadding * 2 - legendGap;
+                const nombre = proy.nombre.length > 20 ? proy.nombre.substring(0, 18) + '…' : proy.nombre;
+                ctx.fillText(nombre, legendX + legendPadding + sampleLineLen + legendGap, itemY);
+            });
+        }
+    }
 }
 
 // Tick drawing helper
@@ -343,8 +402,9 @@ function drawTick(ctx, p1, p2, targetK, size, isMajor, showLabel, showLine, toX,
 
     if (showLine) {
         ctx.beginPath();
-        ctx.strokeStyle = isLight ? '#888' : '#555';
-        ctx.lineWidth = 0.8 / cam.zoom;
+        // Colores y grosores más vivos:
+        ctx.strokeStyle = isLight ? (isMajor ? '#444' : '#666') : (isMajor ? '#eee' : '#999');
+        ctx.lineWidth = (isMajor ? 1.5 : 1.2) / cam.zoom; // Era 0.8 constante
         ctx.moveTo(sx + px * size, sy + py * size);
         ctx.lineTo(sx - px * size, sy - py * size);
         ctx.stroke();
@@ -357,12 +417,27 @@ function drawTick(ctx, p1, p2, targetK, size, isMajor, showLabel, showLine, toX,
 
         ctx.fillStyle = isLight ? '#333' : '#ccc';
         ctx.save();
-        ctx.translate(sx + px * (size + 5 / cam.zoom), sy + py * (size + 5 / cam.zoom));
-        let angle = Math.atan2(dy, dx) - Math.PI / 2;
-        if (angle > Math.PI / 2 || angle < -Math.PI / 2) angle += Math.PI;
-        ctx.rotate(angle);
-        ctx.textAlign = 'center';
-        ctx.fillText(textoPK, 0, 0);
+
+        // Elegir el lado del tick que queda más a la izquierda para mayor consistencia
+        const endAx = sx + px * size;
+        const endAy = sy + py * size;
+        const endBx = sx - px * size;
+        const endBy = sy - py * size;
+
+        // Seleccionar el extremo izquierdo (menor X en pantalla) para colocar el texto
+        let labelX, labelY;
+        if (endAx <= endBx) {
+            labelX = endAx;
+            labelY = endAy;
+        } else {
+            labelX = endBx;
+            labelY = endBy;
+        }
+
+        // Texto horizontal, alineado a la derecha del punto de anclaje (para que no tape la línea del eje)
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(textoPK, labelX - 3 / cam.zoom, labelY);
         ctx.restore();
     }
 }
